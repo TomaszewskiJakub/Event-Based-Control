@@ -35,6 +35,10 @@ class Simulator(QtCore.QObject):
     def robots(self):
         return self._robots
 
+    @property
+    def stock_pile(self):
+        return self._stock_pile
+
     @QtCore.Slot()
     def generate(self, width, height, num_robots, num_trees, x_margin=3, y_margin=4):
         print("Calling generate")
@@ -57,10 +61,13 @@ class Simulator(QtCore.QObject):
         self.generateGrid.emit(width, height, self.dropoff, parking)
         self.drawWorld.emit(self._robots, self._trees)
 
+
+
     # def run(self):
     #     while(True):
     #         while not self._controlable_que.empty():
     #             # Process all incoming contollable events
+    #             # Take element from queue and delete it                    
     #             event = self._controlable_que.get_nowait()
 
     #             event = event.split("_")

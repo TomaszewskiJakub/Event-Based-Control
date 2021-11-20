@@ -1,13 +1,20 @@
 from PySide2.QtWidgets import QApplication
 from view.main_window import MainWindow
-from controller.simulator import Simulator, SimulatorThread, Controller 
+from controller.simulator import Simulator, SimulatorThread
+from controller.controller import Controller
 import sys
 
 if __name__ == "__main__":
     qt_app = QApplication(sys.argv)
     sim = Simulator()
+    controller = Controller()
+
+    sim.controllable_que = controller.controllable_que
+    controller.observable_que = sim.observable_que
+
+    sim.worldGenerated.connect(controller.init_all)
+
     win = MainWindow(sim)
     win.show()
 
-    controller = Controller(sim.trees)
     sys.exit(qt_app.exec_())

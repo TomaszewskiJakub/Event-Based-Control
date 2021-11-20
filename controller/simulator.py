@@ -19,10 +19,12 @@ class SimulatorThread(QtCore.QThread):
 class Simulator(QtCore.QObject):
     generateGrid = QtCore.Signal(int, int, list, list)
     drawWorld = QtCore.Signal(list, list)
+    worldGenerated = QtCore.Signal(list, list, int, int)
 
     def __init__(self):
         super(Simulator, self).__init__()
         self._controlable_que = Queue()
+        self._observable_que = None
         self._trees = []
         self._robots = []
         self._stock_pile = 0
@@ -38,6 +40,18 @@ class Simulator(QtCore.QObject):
     @property
     def stock_pile(self):
         return self._stock_pile
+
+    @property
+    def controllable_que(self):
+        return self._controlable_que
+
+    @property
+    def observable_que(self):
+        return self._observable_que
+
+    @observable_que.setter
+    def observable_que(self, var):
+        self._observable_que = var
 
     @QtCore.Slot()
     def generate(self, width, height, num_robots, num_trees, x_margin=3, y_margin=4):
@@ -60,6 +74,12 @@ class Simulator(QtCore.QObject):
 
         self.generateGrid.emit(width, height, self.dropoff, parking)
         self.drawWorld.emit(self._robots, self._trees)
+        self.worldGenerated.emit(
+            self._robots,
+            self._trees,
+            self._height,
+            self._width
+        )
 
 
 

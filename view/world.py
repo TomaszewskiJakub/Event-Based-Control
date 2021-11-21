@@ -26,8 +26,6 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         self._scene = QtWidgets.QGraphicsScene()
         self.setScene(self._scene)
 
-        
-
         # self.generate_grid(15, 15, dropoff, parking)
         # self.draw_world(np.array(w))
 

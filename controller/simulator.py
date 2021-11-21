@@ -62,8 +62,15 @@ class Simulator(QtCore.QObject):
         self.dropoff = [height//2, width]
 
         for i in range(num_trees):
-            y = random.randrange(0, width - x_margin)
-            x = random.randrange(y_margin, height)
+            generated = False
+            while(not generated):
+                y = random.randrange(0, width - x_margin)
+                x = random.randrange(y_margin, height)
+
+                # Check to pose of all trees so we don't spawn trees one on another
+                # If the ANY pose repeats the any(*) returns true, so it needs
+                # to be negated so generated is false.
+                generated = not any([[x,y] == tree.pose for tree in self._trees])
 
             self._trees.append(mTree([x, y]))
 

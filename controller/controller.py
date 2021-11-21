@@ -59,7 +59,7 @@ class Controller(QtCore.QObject):
         return self._controllable_que
 
     @controllable_que.setter
-    def controlable_que(self, var):
+    def controllable_que(self, var):
         self._controllable_que = var
 
     @QtCore.Slot()

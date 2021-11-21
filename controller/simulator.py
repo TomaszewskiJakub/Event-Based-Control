@@ -23,7 +23,7 @@ class Simulator(QtCore.QObject):
 
     def __init__(self):
         super(Simulator, self).__init__()
-        self._controlable_que = Queue()
+        self._controllable_que = Queue()
         self._observable_que = None
         self._trees = []
         self._robots = []
@@ -43,7 +43,7 @@ class Simulator(QtCore.QObject):
 
     @property
     def controllable_que(self):
-        return self._controlable_que
+        return self._controllable_que
 
     @property
     def observable_que(self):

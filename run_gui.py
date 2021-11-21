@@ -9,8 +9,8 @@ if __name__ == "__main__":
     sim = Simulator()
     controller = Controller()
 
-    sim.controllable_que = controller.controllable_que
-    controller.observable_que = sim.observable_que
+    sim.observable_que = controller.observable_que
+    controller.controllable_que = sim.controllable_que
 
     sim.worldGenerated.connect(controller.init_all)
 

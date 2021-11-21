@@ -8,7 +8,7 @@ class AboutWindow(QtWidgets.QWidget):
 
         self._main_layout = QtWidgets.QVBoxLayout()
         self._contibutors_layout = QtWidgets.QGridLayout()
-        self.setFixedSize(500, 250)
+        self.setFixedSize(500, 270)
         self.setWindowTitle("About")
 
         self._initWindow()
@@ -32,13 +32,23 @@ class AboutWindow(QtWidgets.QWidget):
         self._robot_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
         self._robot_label.linkActivated.connect(self._open_link)
 
-        self._tree_label = QtWidgets.QLabel("<a target=\"_blank\" href=\"https://icons8.com/icon/6xmAFCGEcVns/tree\">Tree</a> icon by <a target=\"_blank\" href=\"https://icons8.com\">Icons8</a>")        
+        self._tree_label = QtWidgets.QLabel("<a target=\"_blank\" href=\"https://icons8.com/icon/6xmAFCGEcVns/tree\">Tree</a> icon by <a target=\"_blank\" href=\"https://icons8.com\">Icons8</a>")
         self._tree_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
         self._tree_label.linkActivated.connect(self._open_link)
+
+        self._stump_label = QtWidgets.QLabel("<a target=\"_blank\" href=\"https://icons8.com/icon/4bTqG77oP5T8/stump\">Stump</a> icon by <a target=\"_blank\" href=\"https://icons8.com\">Icons8</a>")
+        self._stump_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+        self._stump_label.linkActivated.connect(self._open_link)
+
+        self._bridge_label = QtWidgets.QLabel("<a target=\"_blank\" href=\"https://icons8.com/icon/JG1WV8slkojb/bridge\">Bridge</a> icon by <a target=\"_blank\" href=\"https://icons8.com\">Icons8</a>")
+        self._bridge_label.setTextInteractionFlags(QtCore.Qt.TextBrowserInteraction)
+        self._bridge_label.linkActivated.connect(self._open_link)
 
         self._main_layout.addWidget(QtWidgets.QLabel("Icons:"))
         self._main_layout.addWidget(self._robot_label)
         self._main_layout.addWidget(self._tree_label)
+        self._main_layout.addWidget(self._stump_label)
+        self._main_layout.addWidget(self._bridge_label)
 
         self.setLayout(self._main_layout)
 

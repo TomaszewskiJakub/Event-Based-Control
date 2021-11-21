@@ -25,4 +25,3 @@ class MainWindow(QtWidgets.QWidget):
         self._main_layout.addWidget(self._menu)
 
         self.setLayout(self._main_layout)
-

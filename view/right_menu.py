@@ -38,32 +38,32 @@ class RightMenu(QtWidgets.QGroupBox):
         self._initUI()
 
     def _initUI(self):
-        verticalSpacer = QtWidgets.QSpacerItem(
-                10, 10,
-                QtWidgets.QSizePolicy.Minimum,
-                QtWidgets.QSizePolicy.Expanding)
+        # verticalSpacer = QtWidgets.QSpacerItem(
+        #         10, 10,
+        #         QtWidgets.QSizePolicy.Minimum,
+        #         QtWidgets.QSizePolicy.Expanding)
 
         # self._x_textbox.validator = self._world_validator
         # self._y_textbox.validator = self._world_validator
         # self._x_textbox.maxLength = 10
         # self._y_textbox.maxLength = 10
 
-        self._x_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._y_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._robots_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._trees_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
+        # self._x_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._y_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._robots_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._trees_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
 
         self._world_fields_layout.addWidget(self._x_label, 0, 0)
         self._world_fields_layout.addWidget(self._y_label, 1, 0)
@@ -88,7 +88,7 @@ class RightMenu(QtWidgets.QGroupBox):
         self._main_layout.addLayout(self._trees_layout)
         self._main_layout.addLayout(self._button_layout)
         self._main_layout.addWidget(self._about_button)
-        self._main_layout.addSpacerItem(verticalSpacer)
+        # self._main_layout.addSpacerItem(verticalSpacer)
 
         self.setLayout(self._main_layout)
 

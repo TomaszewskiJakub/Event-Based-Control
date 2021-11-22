@@ -20,6 +20,7 @@ class Simulator(QtCore.QObject):
     generateGrid = QtCore.Signal(int, int, list, list)
     drawWorld = QtCore.Signal(list, list)
     worldGenerated = QtCore.Signal(list, list, int, int)
+    logMessage = QtCore.Signal(str)
 
     def __init__(self):
         super(Simulator, self).__init__()
@@ -55,12 +56,13 @@ class Simulator(QtCore.QObject):
 
     @QtCore.Slot()
     def generate(self, width, height, num_robots, num_trees, x_margin=3, y_margin=4):
-        print("Calling generate")
+        self.logMessage.emit("Generating World...")
         self._width = width
         self._height = height
 
         self.dropoff = [height//2, width]
 
+        self.logMessage.emit("Spawning trees...")
         for i in range(num_trees):
             generated = False
             while(not generated):
@@ -74,6 +76,7 @@ class Simulator(QtCore.QObject):
 
             self._trees.append(mTree([x, y]))
 
+        self.logMessage.emit("Spawning robots...")
         parking = []
         for i in range(num_robots):
             self._robots.append(mRobot([0, i]))
@@ -87,7 +90,7 @@ class Simulator(QtCore.QObject):
             self._height,
             self._width
         )
-
+        self.logMessage.emit("World created successfully!")
 
 
     # def run(self):

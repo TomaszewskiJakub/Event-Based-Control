@@ -5,7 +5,7 @@ import numpy as np
 from model.m_tree import tree_state
 
 class WorldDisplay(QtWidgets.QGraphicsView):
-    def __init__(self, side=15):
+    def __init__(self, side=100):
         super(WorldDisplay, self).__init__()
 
         self.robot_pm = QPixmap("./images/Robot.png")

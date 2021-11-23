@@ -1,6 +1,6 @@
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtGui import QIntValidator
-
+from view.about_window import AboutWindow
 
 class RightMenu(QtWidgets.QGroupBox):
     sendData = QtCore.Signal(int, int, int, int)
@@ -33,36 +33,37 @@ class RightMenu(QtWidgets.QGroupBox):
         self._create_button = QtWidgets.QPushButton("Create")
         self._clear_button = QtWidgets.QPushButton("Clear")
         self._default_button = QtWidgets.QPushButton("Default")
+        self._about_button = QtWidgets.QPushButton("About")
 
         self._initUI()
 
     def _initUI(self):
-        verticalSpacer = QtWidgets.QSpacerItem(
-                10, 10,
-                QtWidgets.QSizePolicy.Minimum,
-                QtWidgets.QSizePolicy.Expanding)
+        # verticalSpacer = QtWidgets.QSpacerItem(
+        #         10, 10,
+        #         QtWidgets.QSizePolicy.Minimum,
+        #         QtWidgets.QSizePolicy.Expanding)
 
         # self._x_textbox.validator = self._world_validator
         # self._y_textbox.validator = self._world_validator
         # self._x_textbox.maxLength = 10
         # self._y_textbox.maxLength = 10
 
-        self._x_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._y_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._robots_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
-        self._trees_textbox.setSizePolicy(
-            QtWidgets.QSizePolicy.Minimum,
-            QtWidgets.QSizePolicy.Minimum
-        )
+        # self._x_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._y_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._robots_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
+        # self._trees_textbox.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Minimum,
+        #     QtWidgets.QSizePolicy.Minimum
+        # )
 
         self._world_fields_layout.addWidget(self._x_label, 0, 0)
         self._world_fields_layout.addWidget(self._y_label, 1, 0)
@@ -86,13 +87,17 @@ class RightMenu(QtWidgets.QGroupBox):
         self._main_layout.addLayout(self._robots_layout)
         self._main_layout.addLayout(self._trees_layout)
         self._main_layout.addLayout(self._button_layout)
-        self._main_layout.addSpacerItem(verticalSpacer)
+        self._main_layout.addWidget(self._about_button)
+        # self._main_layout.addSpacerItem(verticalSpacer)
 
         self.setLayout(self._main_layout)
 
         self._create_button.clicked.connect(self._create_clicked)
         self._clear_button.clicked.connect(self._clear_clicked)
         self._default_button.clicked.connect(self._default_clicked)
+
+        self._about_button.clicked.connect(self._about_clicked)
+        self._about_window = AboutWindow()
 
     @QtCore.Slot()
     def _create_clicked(self):
@@ -124,6 +129,10 @@ class RightMenu(QtWidgets.QGroupBox):
         self._y_textbox.setText(str(25))
         self._robots_textbox.setText(str(5))
         self._trees_textbox.setText(str(50))
+
+    @QtCore.Slot()
+    def _about_clicked(self):
+        self._about_window.show()
 
     def validate_inputs(self):
         pass

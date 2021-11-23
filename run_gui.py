@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     sim.worldGenerated.connect(controller.init_all)
 
-    win = MainWindow(sim)
+    win = MainWindow(sim, controller)
     win.show()
 
     sys.exit(qt_app.exec_())

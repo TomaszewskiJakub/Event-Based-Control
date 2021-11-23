@@ -84,6 +84,7 @@ class Simulator(QtCore.QObject):
 
         self.generateGrid.emit(width, height, self.dropoff, parking)
         self.drawWorld.emit(self._robots, self._trees)
+        # send data to init_all() in controller
         self.worldGenerated.emit(
             self._robots,
             self._trees,

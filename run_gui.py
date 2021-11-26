@@ -9,6 +9,13 @@ if __name__ == "__main__":
     sim = Simulator()
     controller = Controller()
 
+    # tmpapp = testApp()
+    # tmptread = testThread(tmpapp)
+    # tmptread.start()
+
+    sim_thread = SimulatorThread(sim)
+    sim_thread.start()
+
     sim.observable_que = controller.observable_que
     controller.controllable_que = sim.controllable_que
 

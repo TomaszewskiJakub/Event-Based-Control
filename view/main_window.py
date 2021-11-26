@@ -21,7 +21,8 @@ class MainWindow(QtWidgets.QWidget):
         self.setWindowTitle("LumberBots")
 
         self._simulator.generateGrid.connect(self._display.generate_grid)
-        self._simulator.drawWorld.connect(self._display.draw_world)
+        self._simulator.initWorld.connect(self._display.init_world)
+        self._simulator.updateWorld.connect(self._display.update_world)
         self._menu.sendData.connect(self._simulator.generate)
         self._simulator.logMessage.connect(self._console.add_log)
 

@@ -1,3 +1,4 @@
+from time import sleep
 from typing import Tuple
 from PySide2 import QtCore
 from queue import Queue
@@ -18,7 +19,8 @@ class SimulatorThread(QtCore.QThread):
 
 class Simulator(QtCore.QObject):
     generateGrid = QtCore.Signal(int, int, list, list)
-    drawWorld = QtCore.Signal(list, list)
+    initWorld = QtCore.Signal(list, list)
+    updateWorld = QtCore.Signal(list, list, int)
     worldGenerated = QtCore.Signal(list, list, int, int)
     logMessage = QtCore.Signal(str)
 
@@ -29,6 +31,12 @@ class Simulator(QtCore.QObject):
         self._trees = []
         self._robots = []
         self._stock_pile = 0
+        self._prev_stock_pile = 0
+        self._is_generated = False
+
+    @property
+    def is_generated(self):
+        return self._is_generated
 
     @property
     def trees(self):
@@ -77,13 +85,13 @@ class Simulator(QtCore.QObject):
             self._trees.append(mTree([x, y]))
 
         self.logMessage.emit("Spawning robots...")
-        parking = []
+        self._parking = []
         for i in range(num_robots):
-            self._robots.append(mRobot([0, i]))
-            parking.append([0, i])
+            self._robots.append(mRobot(i, self._observable_que, [0, i]))
+            self._parking.append([0, i])
 
-        self.generateGrid.emit(width, height, self.dropoff, parking)
-        self.drawWorld.emit(self._robots, self._trees)
+        self.generateGrid.emit(width, height, self.dropoff, self._parking)
+        self.initWorld.emit(self._robots, self._trees)
         self.worldGenerated.emit(
             self._robots,
             self._trees,
@@ -91,13 +99,63 @@ class Simulator(QtCore.QObject):
             self._width
         )
         self.logMessage.emit("World created successfully!")
+        self._is_generated = True
 
+    def run(self):
+        while(True):
+            while not self._controllable_que.empty():
+                # Process all incoming contollable events
+                # Take element from queue and delete it
+                event = self._controllable_que.get_nowait()
+                event = event.split("_")
 
-    # def run(self):
-    #     while(True):
-    #         while not self._controlable_que.empty():
-    #             # Process all incoming contollable events
-    #             # Take element from queue and delete it                    
-    #             event = self._controlable_que.get_nowait()
+                print(event)
 
-    #             event = event.split("_")
+                if(event[0] == 'move'):
+                    # We need to cast the indexes to int because after split they
+                    # are still strings
+                    self._robots[int(event[1])].move_to(
+                        [int(event[2]),
+                         int(event[3])]
+                    )
+
+                if(event[0] == 'pick'):
+                    # We need to cast the indexes to int because after split they
+                    # are still strings
+                    self._robots[int(event[1])].collect(
+                        self._trees[int(event[2])]
+                    )
+
+                if(event[0] == 'drop'):
+                    # We need to cast the indexes to int because after split they
+                    # are still strings
+                    self._robots[int(event[1])].drop()
+                    # Increment the number of wood in the stockpile
+                    self._stock_pile += 1
+
+            # Update the Graphics if something has changed
+            if self.check_update():
+                # print(self._stock_pile)
+                self.updateWorld.emit(
+                    self.robots,
+                    self._trees,
+                    self._stock_pile
+                )
+
+    def check_update(self):
+        update = False
+        for robot in self._robots:
+            if(robot.updated):
+                robot.updated = False
+                update = True
+
+        for tree in self._trees:
+            if(tree.updated):
+                tree.updated = False
+                update = True
+
+        if self._stock_pile != self._prev_stock_pile:
+            self._prev_stock_pile = self._stock_pile
+            update = True
+
+        return update

@@ -22,10 +22,10 @@ class tree_Stete(Enum):
 # Struktura eventu:
 # 1. Każdy event zapamiętywany jest jako string
 # 2. Struktura stringu
-#    move_robotID_x'_y'
-#    pick_robotID_treeID
-#    drop_robotID
-#    ready_robotID
+#    move_robot_id_x'_y'
+#    pick_robot_id_treeID
+#    drop_robot_id
+#    ready_robot_id
 # 3. Example:
 # tmp =  "move_1_2_3"
 # tmp.split("_") = splitted  # ["move", "1", "2", "3"]
@@ -54,6 +54,7 @@ class Controller(QtCore.QObject):
         self._height = -1
 
         self._drop_position = []
+        self._stock_pile = 0
 
     @property
     def observable_que(self):
@@ -176,23 +177,24 @@ class Controller(QtCore.QObject):
             return self._gamma_move(l_event)
 
         if l_event[0] == "pick":
-            return self._gamma_pick(event)
+            return self._gamma_pick(l_event)
 
         if l_event[0] == "drop":
-            return self._gamma_drop(event)
+            return self._gamma_drop(l_event)
 
     def _gamma_move(self, l_event):
         """
         Sprawdza czy event move jest możliwy do wykonania
         """
-        robotID = l_event[1]
+        robot_id = l_event[1]
         x_prim = l_event[2]
         y_prim = l_event[3]
 
         # jeśli robot może przejeżdzać po drzewach to trzeba dodać '0' or 't'
-        if self._occupation_matrix[x_prim, y_prim] == '0' and \
-           (self._robots_state[robotID] == robot_State.READY or \
-           self._robots_state[robotID] == robot_State.IDLE):
+        if (self._occupation_matrix[x_prim, y_prim] == '0' or
+            self._occupation_matrix[x_prim, y_prim] == 't') and \
+           (self._robots_state[robot_id] == robot_State.READY or
+           self._robots_state[robot_id] == robot_State.IDLE):
             return True
         return False
 
@@ -200,12 +202,12 @@ class Controller(QtCore.QObject):
         """
         Sprawdza czy event pick jest możliwy do wykonania
         """
-        robotID = l_event[1]
+        robot_id = l_event[1]
         treeID = l_event[1]
 
-        if self._current_robots_position[robotID] ==\
+        if self._current_robots_position[robot_id] ==\
            self._trees_position[treeID] and \
-           self._robots_state[robotID] == robot_State.READY:
+           self._robots_state[robot_id] == robot_State.READY:
             return True
         return False
 
@@ -213,10 +215,10 @@ class Controller(QtCore.QObject):
         """
         Sprawdza czy event drop jest możliwy do wykonania
         """
-        robotID = l_event[1]
+        robot_id = l_event[1]
 
-        if self._current_robots_position[robotID] == self._drop_position and \
-           self._robots_state[robotID] == robot_State.READY:
+        if self._current_robots_position[robot_id] == self._drop_position and \
+           self._robots_state[robot_id] == robot_State.READY:
             return True
         return False
 
@@ -265,55 +267,129 @@ class Controller(QtCore.QObject):
         Przetwarzaj tak długo jak kolejka obserwowalnych nie jest pusta.
         Aktualizuj stan na podstawie aktualnego stanu.
         """
-        pass
+        while not self._observable_que.empty():
+            event = self._observable_que.get_nowait()
+            l_event = event.split("_")
+            robot_id = l_event[1]
+            if self._robots_state[robot_id] == robot_State.COLLECTING:
+                self._update_ready_collecting(robot_id)
 
-    def _update_ready_collecting(self):
+            if self._robots_state[robot_id] == robot_State.DROPPING:
+                self._update_ready_dropping(robot_id)
+
+            if self._robots_state[robot_id] == robot_State.MOVING and\
+               not self._missions[robot_id].empty():
+                self._update_ready_moving_notEmpty(robot_id)
+
+            if self._robots_state[robot_id] == robot_State.MOVING and\
+               self._missions[robot_id].empty():
+                self._update_ready_moving_empty(robot_id)
+
+    def _update_ready_collecting(self, robot_id):
         """
         Ready i aktualny stan collecting
         """
-        pass
+        # stan robota zmienia się na ready
+        self._robots_state[robot_id] = robot_State.READY
+        # stan drzewa zmienia się a picked -> potrzebne id drzewa
+        # potrzebne jest id_drzewa do zmiany stanu.
+        tree_id = self._trees_position.index(
+                  self._current_robots_position[robot_id])
+        self._trees_state[tree_id] = tree_Stete.PICKED
 
-    def _update_ready_dropping(self):
+        # usunąć drzewo z macierzy zajętości? nie, ponieważ:
+        # załatwia to już zmiana na 'r' w momencie gdy robot stanie na polu
+        # a gdy z niego wyjedzie zostanie tam ustawiona warość '0'
+
+    def _update_ready_dropping(self, robot_id):
         """
         Ready i aktualny stan dropping
         """
-        pass
+        # stan robota zmienia się na ready
+        self._robots_state[robot_id] = robot_State.READY
+        # zinkrementować ilość drzew w magazynie o 1 - jest też po stronie UI
+        self._stock_pile += 1
 
-    def _update_ready_moving_notEmpty(self):
+    def _update_ready_moving_notEmpty(self, robot_id):
         """
         Ready i aktualny jest moving i misja nie jest pusta
         """
-        pass
+        # stan robota zmienia się na ready
+        self._robots_state[robot_id] = robot_State.READY
+        # zwalniamy pole z macierzy zajętości
+        x = self._current_robots_position[robot_id][0]
+        y = self._current_robots_position[robot_id][1]
+        self._occupation_matrix[x, y] = '0'
+        # zmianiamy aktualną pozycje robota na x', y'
+        x_prim = self._next_robots_position[robot_id][0]
+        y_prim = self._next_robots_position[robot_id][1]
+        self._current_robots_position[robot_id] = [x_prim, y_prim]
 
-    def _update_ready_moving_empty(self):
+    def _update_ready_moving_empty(self, robot_id):
         """
         Ready i aktualny jest moving i misja jest pusta
         """
-        pass
+        # stan robota zmienia się na idle
+        self._robots_state[robot_id] = robot_State.IDLE
+        # zwalniamy pole z macierzy zajętości
+        x = self._current_robots_position[robot_id][0]
+        y = self._current_robots_position[robot_id][1]
+        self._occupation_matrix[x, y] = '0'
+        # zmianiamy aktualną pozycje robota na x', y'
+        x_prim = self._next_robots_position[robot_id][0]
+        y_prim = self._next_robots_position[robot_id][1]
+        self._current_robots_position[robot_id] = [x_prim, y_prim]
 
     def _update_state_control(self, event):
         """
         W zależnosci od wysyłanego eventu kotrolnego zakutalizuj stan
         """
-        pass
+        l_event = event.split("_")
+        if l_event[0] == "move":
+            return self._update_state_move(l_event)
 
-    def _update_state_move(self, event):
+        if l_event[0] == "pick":
+            return self._update_state_pick(l_event)
+
+        if l_event[0] == "drop":
+            return self._update_state_drop(l_event)
+
+    def _update_state_move(self, l_event):
         """
         Zaktualizuj stan w momencie jak wysyłamy move do konkretnego robota
         """
-        pass
+        robot_id = l_event[1]
+        x_prim = l_event[2]
+        y_prim = l_event[3]
+        # stan robota zmienia się na moving
+        self._robots_state[robot_id] = robot_State.MOVING
+        # zajmujemy pole x_prim y_prim
+        self._occupation_matrix[x_prim, y_prim] = 'r'
+        # dodajemy następną pozycje robota:
+        self._next_robots_position[robot_id] = [x_prim, y_prim]
+        # usuwamy zadanie z misji danego robota
+        self._missions[robot_id].pop(0)
 
-    def _update_state_pick(self, event):
+    def _update_state_pick(self, l_event):
         """
         Zaktualizuj stan w momencie jak wysyłamy pick do konkretnego robota
         """
-        pass
+        robot_id = l_event[1]
+        treeID = l_event[1]
+        # stan robota zmienia się na collecting
+        self._robots_state[robot_id] = robot_State.COLLECTING
+        # usuwamy zadanie z misji danego robota
+        self._missions[robot_id].pop(0)
 
-    def _update_state_drop(self, event):
+    def _update_state_drop(self, l_event):
         """
         Zaktualizuj stan w momencie jak wysyłamy drop do konkretnego robota
         """
-        pass
+        robot_id = l_event[1]
+        # stan robota zmienia się na dropping
+        self._robots_state[robot_id] = robot_State.DROPPING
+        # usuwamy zadanie z misji danego robota
+        self._missions[robot_id].pop(0)
 
     def _select_optimal(self, accepted_event_list):
         """

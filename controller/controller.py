@@ -4,6 +4,7 @@ from PySide2 import QtCore
 import numpy as np
 from numpy.core.records import array
 
+
 class robot_State(Enum):
     IDLE = 0
     MOVING = 1
@@ -16,6 +17,7 @@ class tree_Stete(Enum):
     GROWN = 0
     PICKED = 1
     ASSIGNED = 2
+
 
 # Struktura eventu:
 # 1. Każdy event zapamiętywany jest jako string
@@ -51,6 +53,8 @@ class Controller(QtCore.QObject):
         self._width = -1
         self._height = -1
 
+        self._drop_position = []
+
     @property
     def observable_que(self):
         return self._observable_que
@@ -69,6 +73,7 @@ class Controller(QtCore.QObject):
         Sygnał inicializujący Controller
         """
         print("initing controller")
+        self._drop_position = [width, height//2]
         self._init_robots(robots)
         self._init_trees(trees)
         self._init_occupation_matrix(trees, robots, height, width)
@@ -83,18 +88,17 @@ class Controller(QtCore.QObject):
         drzewo - "t"
         """
 
-        tmp_arr = [["0" for i in range(width)] for j in range(height)]
+        tmp_arr = [['0' for i in range(width)] for j in range(height)]
         tmp_arr = np.array(tmp_arr)
         self._occupation_matrix = tmp_arr
         for robot in robots:
-            self._occupation_matrix[robot.pose[0],robot.pose[1]] = 'r' 
+            self._occupation_matrix[robot.pose[0], robot.pose[1]] = 'r'
 
         for tree in trees:
-            self._occupation_matrix[tree.pose[0],tree.pose[1]] = 't' 
-        
+            self._occupation_matrix[tree.pose[0], tree.pose[1]] = 't'
+
         # Just for debugging
         # print("Initialized _occupation_matrix: ",self._occupation_matrix)
-
 
     def _init_robots(self, robots):
         """
@@ -102,17 +106,18 @@ class Controller(QtCore.QObject):
         i zainicjalizuj  current_robots_position,
         next_robots_position oraz robots_state
         """
-         
         for robot in robots:
             self._current_robots_position.append(robot.pose)
             self._next_robots_position.append(None)
             self._robots_state.append(robot_State.IDLE)
 
         # Just for debugging
-        print("Initialized _current_robots_position:", self._current_robots_position)
-        print("Initialized _next_robots_position:", self._next_robots_position)
-        print("Initialized _robots_state:", self._robots_state)
-
+        print("Initialized _current_robots_position:",
+              self._current_robots_position)
+        print("Initialized _next_robots_position:",
+              self._next_robots_position)
+        print("Initialized _robots_state:",
+              self._robots_state)
 
     def _init_trees(self, trees):
         """
@@ -122,7 +127,6 @@ class Controller(QtCore.QObject):
         for tree in trees:
             self._trees_position.append(tree.pose)
             self._trees_state.append(tree_Stete.GROWN)
-          
 
         # Just for debugging
         print("Initialized _trees_position:", self._trees_position)
@@ -130,7 +134,7 @@ class Controller(QtCore.QObject):
 
     def _init_missions(self):
         """
-        zainicjalizuj puste listy 
+        zainicjalizuj puste listy
         Misje będą wysznaczane w pętli programu:
         Zawsze kiedy program sprawdzi że jakiś robot ma pustą misje
         to wyznaczy mu nową,
@@ -138,7 +142,7 @@ class Controller(QtCore.QObject):
         misje dla wszystkich robotów
         """
         self._missions = [None for i in range(len(self._robots_state))]
-        
+
         # Just for debugging
         print("Initialized _missions:", self._missions)
 
@@ -167,25 +171,54 @@ class Controller(QtCore.QObject):
         """
         W zależności od eventu wywołaj odpowiednia gamme
         """
-        pass
+        l_event = event.split("_")
+        if l_event[0] == "move":
+            return self._gamma_move(l_event)
 
-    def _gamma_move(self, event):
+        if l_event[0] == "pick":
+            return self._gamma_pick(event)
+
+        if l_event[0] == "drop":
+            return self._gamma_drop(event)
+
+    def _gamma_move(self, l_event):
         """
         Sprawdza czy event move jest możliwy do wykonania
         """
-        pass
+        robotID = l_event[1]
+        x_prim = l_event[2]
+        y_prim = l_event[3]
 
-    def _gamma_pick(self, event):
+        # jeśli robot może przejeżdzać po drzewach to trzeba dodać '0' or 't'
+        if self._occupation_matrix[x_prim, y_prim] == '0' and \
+           (self._robots_state[robotID] == robot_State.READY or \
+           self._robots_state[robotID] == robot_State.IDLE):
+            return True
+        return False
+
+    def _gamma_pick(self, l_event):
         """
         Sprawdza czy event pick jest możliwy do wykonania
         """
-        pass
+        robotID = l_event[1]
+        treeID = l_event[1]
 
-    def _gamma_drop(self, event):
+        if self._current_robots_position[robotID] ==\
+           self._trees_position[treeID] and \
+           self._robots_state[robotID] == robot_State.READY:
+            return True
+        return False
+
+    def _gamma_drop(self, l_event):
         """
         Sprawdza czy event drop jest możliwy do wykonania
         """
-        pass
+        robotID = l_event[1]
+
+        if self._current_robots_position[robotID] == self._drop_position and \
+           self._robots_state[robotID] == robot_State.READY:
+            return True
+        return False
 
     def _generate_mission(self, robot_id):
         """
@@ -209,14 +242,14 @@ class Controller(QtCore.QObject):
 
     def _mission_2_entrance(self, robot_id, tree_id):
         """
-        Generuje ścieżkę od wybranwgo drzewa do wjazdu (żeby stanął na pierwszym
-        kafelku drogi).
+        Generuje ścieżkę od wybranwgo drzewa do wjazdu (żeby stanął na
+        pierwszym kafelku drogi).
         """
         pass
 
     def _mission_road(self, robot_id):
         """
-        Generuj ruch po drodze do magazynu, odstawienie drzewa, i ruch od 
+        Generuj ruch po drodze do magazynu, odstawienie drzewa, i ruch od
         magazynu do wyjazdu (żeby stanął na ostatnim kafelku drogi).
         """
         pass

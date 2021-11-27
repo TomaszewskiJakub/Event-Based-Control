@@ -68,29 +68,32 @@ class Simulator(QtCore.QObject):
         self._width = width
         self._height = height
 
-        self.dropoff = [height//2, width]
+        self.dropoff = [width, height//2]
 
         self.logMessage.emit("Spawning trees...")
         for i in range(num_trees):
             generated = False
             while(not generated):
-                y = random.randrange(0, width - x_margin)
-                x = random.randrange(y_margin, height)
+                x = random.randrange(0, width - x_margin)
+                y = random.randrange(y_margin, height)
 
                 # Check to pose of all trees so we don't spawn trees one on another
                 # If the ANY pose repeats the any(*) returns true, so it needs
                 # to be negated so generated is false.
-                generated = not any([[x,y] == tree.pose for tree in self._trees])
+                generated = not any([[x, y] == tree.pose for tree in self._trees])
 
             self._trees.append(mTree([x, y]))
+
+        for tree in self._trees:
+            print(tree.pose)
 
         self.logMessage.emit("Spawning robots...")
         self._parking = []
         for i in range(num_robots):
-            self._robots.append(mRobot(i, self._observable_que, [0, i]))
-            self._parking.append([0, i])
+            self._robots.append(mRobot(i, self._observable_que, [i, 0]))
+            self._parking.append([i, 0])
 
-        self.generateGrid.emit(width, height, self.dropoff, self._parking)
+        self.generateGrid.emit(height, width, self.dropoff, self._parking)
         self.initWorld.emit(self._robots, self._trees)
         self.worldGenerated.emit(
             self._robots,

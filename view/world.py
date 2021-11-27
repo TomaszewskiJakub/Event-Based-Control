@@ -32,9 +32,6 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         self._scene = QtWidgets.QGraphicsScene()
         self.setScene(self._scene)
 
-        # self.generate_grid(15, 15, dropoff, parking)
-        # self.draw_world(np.array(w))
-
     @QtCore.Slot()
     def update_world(self, robots, trees, stock_pile):
         s = time()
@@ -47,8 +44,8 @@ class WorldDisplay(QtWidgets.QGraphicsView):
 
         for i in range(len(robots)):
             self._robot_items[i].setPos(
-                robots[i].pose[1]*self.side,
-                robots[i].pose[0]*self.side
+                robots[i].pose[0]*self.side,
+                robots[i].pose[1]*self.side
             )
 
         if((stock_pile // 4 - 1) >= 0 and (stock_pile // 4 - 1) < len(self._bridge_items)):
@@ -68,7 +65,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                             QtCore.QSize(self.side, self.side)
                         )
                     )
-                item.setPos(tree.pose[1]*self.side, tree.pose[0]*self.side)
+                item.setPos(tree.pose[0]*self.side, tree.pose[1]*self.side)
                 self._tree_items.append(item)
 
         for robot in robots:
@@ -77,7 +74,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                         QtCore.QSize(self.side, self.side)
                     )
                 )
-            item.setPos(robot.pose[1]*self.side, robot.pose[0]*self.side)
+            item.setPos(robot.pose[0]*self.side, robot.pose[1]*self.side)
             self._robot_items.append(item)
 
         for i in range(1, 4):
@@ -86,8 +83,8 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                         QtCore.QSize(self.side, self.side)
                     )
                 )
-            item.setPos((self._dropoff[1]+i)*self.side,
-                        self._dropoff[0]*self.side)
+            item.setPos((self._dropoff[0]+i)*self.side,
+                        self._dropoff[1]*self.side)
             item.hide()
             self._bridge_items.append(item)
 
@@ -117,11 +114,11 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         #             item.setPos(j*self.side, i*self.side)
 
     @QtCore.Slot()
-    def generate_grid(self, columns, rows, dropoff, parking):
+    def generate_grid(self, height, width, dropoff, parking):
         s = time()
         self._scene.clear()
         print("Clearing: ", time()-s)
-        rows += 8  # num of rows in grid
+        width += 8  # num of width in grid
 
         grass = QBrush(QColor(qRgb(0, 154, 23)))  # background color of square
         road = QBrush(QColor(qRgb(25, 25, 25)))  # background color of square
@@ -130,9 +127,9 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         pen = QPen(QtCore.Qt.black)  # border color of square
 
         rect = QtCore.QRectF(0, 0, self.side, self.side)
-        for i in range(rows):
-            for j in range(columns):
-                if(i < rows-8 or i > rows-5):
+        for i in range(width):
+            for j in range(height):
+                if(i < width-8 or i > width-5):
                     self._scene.addRect(
                         rect.translated(
                             i * self.side,
@@ -140,7 +137,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                         pen,
                         grass
                     )
-                elif(i == rows-8):
+                elif(i == width-8):
                     self._scene.addRect(
                         rect.translated(
                             i * self.side,
@@ -160,8 +157,8 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         for square in parking:
             self._scene.addRect(
                 rect.translated(
-                    square[1] * self.side,
-                    square[0] * self.side),
+                    square[0] * self.side,
+                    square[1] * self.side),
                 pen,
                 road
             )
@@ -169,8 +166,8 @@ class WorldDisplay(QtWidgets.QGraphicsView):
         self._dropoff = dropoff
         self._scene.addRect(
             rect.translated(
-                dropoff[1] * self.side,
-                dropoff[0] * self.side),
+                dropoff[0] * self.side,
+                dropoff[1] * self.side),
             pen,
             drop
         )

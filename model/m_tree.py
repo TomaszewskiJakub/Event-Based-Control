@@ -10,6 +10,8 @@ class mTree():
     def __init__(self, init_pose=[0, 0]):
         self.pose = init_pose
         self.state = tree_state.GROWN
+        self.updated = False
 
     def cut(self):
         self.state = tree_state.CUTTED
+        self.updated = True

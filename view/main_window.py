@@ -25,6 +25,7 @@ class MainWindow(QtWidgets.QWidget):
         self._simulator.updateWorld.connect(self._display.update_world)
         self._menu.sendData.connect(self._simulator.generate)
         self._simulator.logMessage.connect(self._console.add_log)
+        self._menu.logMessage.connect(self._console.add_log)
 
     def initUI(self):
         # self._menu.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)

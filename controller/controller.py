@@ -1,7 +1,8 @@
 from enum import Enum
 from queue import Queue
 from PySide2 import QtCore
-
+import numpy as np
+from numpy.core.records import array
 
 class robot_State(Enum):
     IDLE = 0
@@ -63,17 +64,17 @@ class Controller(QtCore.QObject):
         self._controllable_que = var
 
     @QtCore.Slot()
-    def init_all(self, trees, robots, height, width):
+    def init_all(self, robots, trees, height, width):
         """
         Sygnał inicializujący Controller
         """
         print("initing controller")
-        # self._init_robots()
-        # self._init_robots()
-        # self._init_occupation_matrix()
-        # self._init_missions()
+        self._init_robots(robots)
+        self._init_trees(trees)
+        self._init_occupation_matrix(trees, robots, height, width)
+        self._init_missions()
 
-    def _init_occupation_matrix(self, tree, robots):
+    def _init_occupation_matrix(self, trees, robots, height, width):
         """
         Wez listy robotów i drzew z symulatora: trees, robots
         i zainicjalizuj macierz zajetości:
@@ -82,20 +83,50 @@ class Controller(QtCore.QObject):
         drzewo - "t"
         """
 
+        tmp_arr = [["0" for i in range(width)] for j in range(height)]
+        tmp_arr = np.array(tmp_arr)
+        self._occupation_matrix = tmp_arr
+        for robot in robots:
+            self._occupation_matrix[robot.pose[0],robot.pose[1]] = 'r' 
+
+        for tree in trees:
+            self._occupation_matrix[tree.pose[0],tree.pose[1]] = 't' 
+        
+        # Just for debugging
+        # print("Initialized _occupation_matrix: ",self._occupation_matrix)
+
+
     def _init_robots(self, robots):
         """
         Wez liste robotów  z symulatora: robots
         i zainicjalizuj  current_robots_position,
         next_robots_position oraz robots_state
         """
-        pass
+         
+        for robot in robots:
+            self._current_robots_position.append(robot.pose)
+            self._next_robots_position.append(None)
+            self._robots_state.append(robot_State.IDLE)
+
+        # Just for debugging
+        print("Initialized _current_robots_position:", self._current_robots_position)
+        print("Initialized _next_robots_position:", self._next_robots_position)
+        print("Initialized _robots_state:", self._robots_state)
+
 
     def _init_trees(self, trees):
         """
         Wez liste drzew  z symulatora: trees
         i zainicjalizuj trees_position oraz trees_state
         """
-        pass
+        for tree in trees:
+            self._trees_position.append(tree.pose)
+            self._trees_state.append(tree_Stete.GROWN)
+          
+
+        # Just for debugging
+        print("Initialized _trees_position:", self._trees_position)
+        print("Initialized _trees_state:", self._trees_state)
 
     def _init_missions(self):
         """
@@ -106,7 +137,10 @@ class Controller(QtCore.QObject):
         Tak więc w pierwszej iteracji programu zostaną wyznaczone
         misje dla wszystkich robotów
         """
-        pass
+        self._missions = [None for i in range(len(self._robots_state))]
+        
+        # Just for debugging
+        print("Initialized _missions:", self._missions)
 
     def run(self):
         """

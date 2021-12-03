@@ -3,6 +3,7 @@ from queue import Queue
 from PySide2 import QtCore
 import numpy as np
 from numpy.core.records import array
+from gridGraph import GridGraph
 
 
 class robot_State(Enum):
@@ -56,6 +57,8 @@ class Controller(QtCore.QObject):
         self._drop_position = []
         self._stock_pile = 0
 
+        self.graph = None
+
     @property
     def observable_que(self):
         return self._observable_que
@@ -74,11 +77,13 @@ class Controller(QtCore.QObject):
         Sygnał inicializujący Controller
         """
         print("initing controller")
+        self.graph = GridGraph(width, height)
         self._drop_position = [width, height//2]
         self._init_robots(robots)
         self._init_trees(trees)
         self._init_occupation_matrix(trees, robots, height, width)
         self._init_missions()
+        self._generate_mission(1)
 
     def _init_occupation_matrix(self, trees, robots, height, width):
         """
@@ -230,7 +235,23 @@ class Controller(QtCore.QObject):
         3. Od wjazdu do magazynu, upusc, od magazynu do wyjazdu
         4. Od wyjzdu do parkingu
         """
-        pass
+        desired_tree_position = self._trees_position[robot_id]
+        robot_position = self._current_robots_position[robot_id]
+        start = tuple(robot_position)
+        goal = tuple(desired_tree_position)
+        print("start", start)
+        print("goal", goal)
+
+        came_from, cost_so_far = self.graph.a_star_search(self.graph,
+                                                          start, goal)
+        self.graph.draw_grid(self.graph,
+                             point_to=came_from,
+                             start=start, goal=goal)
+        self.graph.draw_grid(self.graph,
+                             path=self.graph.reconstruct_path(came_from,
+                                                              start=start,
+                                                              goal=goal))
+        print(self.graph.reconstruct_path(came_from, start=start, goal=goal))
 
     def _mission_collect_tree(self, robot_id):
         """

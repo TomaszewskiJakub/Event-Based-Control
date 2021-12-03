@@ -45,10 +45,14 @@ class Console(QtWidgets.QWidget):
         self._parse_command(command)
 
     def _parse_command(self, command):
+        if not self._simulator.is_generated:
+            self._text_box.append("Generate the world first!")
+            return
         if "ready" in command:
             if(self._ready_re.match(command)):
                 self._text_box.append("Sending " + command + " to controller!")
                 self._controller._observable_que.put(command)
+                self._input_line.clear()
             else:
                 self._text_box.append("Invalid structure of ready! It should be: ready_RobotID")
             pass
@@ -56,21 +60,22 @@ class Console(QtWidgets.QWidget):
             if(self._move_re.match(command)):
                 self._text_box.append("Sending " + command + " to simulator!")
                 self._simulator._controllable_que.put(command)
+                self._input_line.clear()
             else:
                 self._text_box.append("Invalid structure of move! It should be: move_RobotID_X'_Y'")
         elif("pick" in command):
             if(self._pick_re.match(command)):
                 self._text_box.append("Sending " + command + " to simulator!")
                 self._simulator._controllable_que.put(command)
+                self._input_line.clear()
             else:
                 self._text_box.append("Invalid structure of pick! It should be: pick_RobotID_TreeID")
         elif("drop" in command):
             if(self._drop_re.match(command)):
                 self._text_box.append("Sending " + command + " to simulator!")
                 self._simulator._controllable_que.put(command)
+                self._input_line.clear()
             else:
                 self._text_box.append("Invalid structure of drop! It should be: drop_RobotID")
         else:
             self._text_box.append("Unrecognized command!")
-
-        self._input_line.clear()

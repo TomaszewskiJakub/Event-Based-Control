@@ -2,8 +2,10 @@ from PySide2 import QtWidgets, QtCore
 from PySide2.QtGui import QIntValidator
 from view.about_window import AboutWindow
 
+
 class RightMenu(QtWidgets.QGroupBox):
     sendData = QtCore.Signal(int, int, int, int)
+    logMessage = QtCore.Signal(str)
 
     def __init__(self):
         super(RightMenu, self).__init__("Menu")
@@ -16,15 +18,13 @@ class RightMenu(QtWidgets.QGroupBox):
         self._button_layout = QtWidgets.QHBoxLayout()
 
         self._world_label = QtWidgets.QLabel("World size:")
-        self._x_label = QtWidgets.QLabel("x:")
-        self._y_label = QtWidgets.QLabel("y:")
-        self._x_textbox = QtWidgets.QLineEdit()
-        self._y_textbox = QtWidgets.QLineEdit()
-        self._world_validator = QIntValidator(10, 50)
+        self._height_label = QtWidgets.QLabel("height:")
+        self._width_label = QtWidgets.QLabel("width:")
+        self._height_textbox = QtWidgets.QLineEdit()
+        self._width_textbox = QtWidgets.QLineEdit()
 
         self._robots_label = QtWidgets.QLabel("Number of robots:")
         self._robots_textbox = QtWidgets.QLineEdit()
-        self._robots_validator = QIntValidator(1, 10)
 
         self._trees_label = QtWidgets.QLabel("Number of trees:   ")
         self._trees_textbox = QtWidgets.QLineEdit()
@@ -38,37 +38,10 @@ class RightMenu(QtWidgets.QGroupBox):
         self._initUI()
 
     def _initUI(self):
-        # verticalSpacer = QtWidgets.QSpacerItem(
-        #         10, 10,
-        #         QtWidgets.QSizePolicy.Minimum,
-        #         QtWidgets.QSizePolicy.Expanding)
-
-        # self._x_textbox.validator = self._world_validator
-        # self._y_textbox.validator = self._world_validator
-        # self._x_textbox.maxLength = 10
-        # self._y_textbox.maxLength = 10
-
-        # self._x_textbox.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Minimum,
-        #     QtWidgets.QSizePolicy.Minimum
-        # )
-        # self._y_textbox.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Minimum,
-        #     QtWidgets.QSizePolicy.Minimum
-        # )
-        # self._robots_textbox.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Minimum,
-        #     QtWidgets.QSizePolicy.Minimum
-        # )
-        # self._trees_textbox.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Minimum,
-        #     QtWidgets.QSizePolicy.Minimum
-        # )
-
-        self._world_fields_layout.addWidget(self._x_label, 0, 0)
-        self._world_fields_layout.addWidget(self._y_label, 1, 0)
-        self._world_fields_layout.addWidget(self._x_textbox, 0, 1)
-        self._world_fields_layout.addWidget(self._y_textbox, 1, 1)
+        self._world_fields_layout.addWidget(self._height_label, 0, 0)
+        self._world_fields_layout.addWidget(self._width_label, 1, 0)
+        self._world_fields_layout.addWidget(self._height_textbox, 0, 1)
+        self._world_fields_layout.addWidget(self._width_textbox, 1, 1)
 
         self._world_layout.addWidget(self._world_label)
         self._world_layout.addLayout(self._world_fields_layout)
@@ -88,7 +61,6 @@ class RightMenu(QtWidgets.QGroupBox):
         self._main_layout.addLayout(self._trees_layout)
         self._main_layout.addLayout(self._button_layout)
         self._main_layout.addWidget(self._about_button)
-        # self._main_layout.addSpacerItem(verticalSpacer)
 
         self.setLayout(self._main_layout)
 
@@ -101,14 +73,25 @@ class RightMenu(QtWidgets.QGroupBox):
 
     @QtCore.Slot()
     def _create_clicked(self):
+        width = int(self._width_textbox.text())
+        height = int(self._height_textbox.text())
+        num_robots = int(self._robots_textbox.text())
+        num_trees = int(self._trees_textbox.text())
+
+        try:
+            self.validate_inputs(width, height, num_robots, num_trees)
+        except RuntimeError as e:
+            self.logMessage.emit(str(e))
+            return
+
         self.sendData.emit(
-            int(self._x_textbox.text()),
-            int(self._y_textbox.text()),
-            int(self._robots_textbox.text()),
-            int(self._trees_textbox.text())
+            width,
+            height,
+            num_robots,
+            num_trees
         )
-        self._x_textbox.setDisabled(True)
-        self._y_textbox.setDisabled(True)
+        self._height_textbox.setDisabled(True)
+        self._width_textbox.setDisabled(True)
         self._robots_textbox.setDisabled(True)
         self._trees_textbox.setDisabled(True)
 
@@ -118,15 +101,15 @@ class RightMenu(QtWidgets.QGroupBox):
 
     @QtCore.Slot()
     def _clear_clicked(self):
-        self._x_textbox.clear()
-        self._y_textbox.clear()
+        self._height_textbox.clear()
+        self._width_textbox.clear()
         self._robots_textbox.clear()
         self._trees_textbox.clear()
 
     @QtCore.Slot()
     def _default_clicked(self):
-        self._x_textbox.setText(str(25))
-        self._y_textbox.setText(str(25))
+        self._height_textbox.setText(str(25))
+        self._width_textbox.setText(str(25))
         self._robots_textbox.setText(str(5))
         self._trees_textbox.setText(str(50))
 
@@ -134,5 +117,21 @@ class RightMenu(QtWidgets.QGroupBox):
     def _about_clicked(self):
         self._about_window.show()
 
-    def validate_inputs(self):
-        pass
+    def validate_inputs(self, width, height, num_robots, num_trees):
+        if(width < 10 or width > 50):
+            raise RuntimeError("Wrong width (10 < w < 50)!")
+        if(height < 10 or height > 50):
+            raise RuntimeError("Wrong height (10 < h < 50)!")
+
+        # We assume that the bridge has length 3 and each segment takes 4 wood
+        # so we need at least 12 wood
+        if(num_trees < 12):
+            raise RuntimeError("Not enough trees (min. 12)!")
+
+        # If there is fewer places where trees can spawn than the number of trees
+        if((width-3)*(height-4) < num_trees):
+            raise RuntimeError("Not enough spawning spaces for trees")
+
+        # We need to have at least 1 robot and at most (width-3) robots
+        if(num_robots < 1 or num_robots > width-3):
+            raise RuntimeError("Wrong number of robots (1 <= r < w-3)!")

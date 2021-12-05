@@ -10,7 +10,7 @@ class mRobot():
         self._id = id
 
     def move_to(self, pose):
-        timer = threading.Timer(random.uniform(0, 5), self._move_callback, [pose])
+        timer = threading.Timer(random.uniform(0, 1), self._move_callback, [pose])
         timer.start()
 
     def _move_callback(self, pose):
@@ -20,7 +20,7 @@ class mRobot():
         self.updated = True
 
     def collect(self, tree):
-        timer = threading.Timer(random.uniform(0, 5), self._collect_callback, [tree])
+        timer = threading.Timer(random.uniform(0, 1), self._collect_callback, [tree])
         timer.start()
 
     def _collect_callback(self, tree):
@@ -29,7 +29,7 @@ class mRobot():
         tree.cut()
 
     def drop(self):
-        timer = threading.Timer(random.uniform(0, 5), self._drop_callback)
+        timer = threading.Timer(random.uniform(0, 1), self._drop_callback)
         timer.start()
 
     def _drop_callback(self):

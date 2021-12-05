@@ -36,6 +36,8 @@ class GridGraph:
         # return np.linalg.norm(np.array(a)-np.array(b))
 
     def a_star_search(self, graph, start, goal):
+        print("goal: ", goal)
+        print("start: ", start)
         frontier = []
         heapq.heappush(frontier, (0, start))
         came_from = {}

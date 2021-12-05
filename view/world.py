@@ -50,7 +50,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
 
         if((stock_pile // 4 - 1) >= 0 and (stock_pile // 4 - 1) < len(self._bridge_items)):
             self._bridge_items[stock_pile // 4 - 1].show()
-        print("Update time: ", time() - s)
+        # print("Update time: ", time() - s)
 
     @QtCore.Slot()
     def init_world(self, robots, trees):
@@ -88,7 +88,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
             item.hide()
             self._bridge_items.append(item)
 
-        print("Foreground: ", time()-s)
+        # print("Foreground: ", time()-s)
         # for i in range(w):
         #     for j in range(h):
         #         if(world[i][j] == "S"):
@@ -117,7 +117,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
     def generate_grid(self, height, width, dropoff, parking):
         s = time()
         self._scene.clear()
-        print("Clearing: ", time()-s)
+        # print("Clearing: ", time()-s)
         width += 8  # num of width in grid
 
         grass = QBrush(QColor(qRgb(0, 154, 23)))  # background color of square
@@ -174,7 +174,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
 
         # this is required to ensure that fitInView works on first shown too
         self.resizeScene()
-        print("Background: ", time()-s)
+        # print("Background: ", time()-s)
 
     def resizeScene(self):
         self.fitInView(self._scene.sceneRect())

@@ -1,9 +1,13 @@
 from enum import Enum
-from queue import Queue
+from queue import Empty, Queue
 from PySide2 import QtCore
 import numpy as np
 from numpy.core.records import array
+from numpy.lib.function_base import append
 from gridGraph import GridGraph
+import random
+
+from model.m_tree import tree_state
 
 
 class robot_State(Enum):
@@ -34,13 +38,23 @@ class tree_Stete(Enum):
 # id = splitted[1]
 # xp = splitted[2]
 # yp = splitted[3]
+class ControllerThread(QtCore.QThread):
+    def __init__(self, app):
+        super(ControllerThread, self).__init__(parent=None)
+        self._app = app
+
+    def run(self):
+        print("Starting controller")
+        self._app.run()
 
 
 class Controller(QtCore.QObject):
     def __init__(self):
+        super(Controller, self).__init__()
         self._current_robots_position = []
         self._next_robots_position = []
         self._robots_state = []
+        self._robot_tree = []
 
         self._trees_position = []
         self._trees_state = []
@@ -57,6 +71,8 @@ class Controller(QtCore.QObject):
         self._drop_position = []
         self._stock_pile = 0
 
+        self._entrance = None
+        self._exit = None
         self.graph = None
 
     @property
@@ -77,13 +93,19 @@ class Controller(QtCore.QObject):
         Sygnał inicializujący Controller
         """
         print("initing controller")
-        self.graph = GridGraph(width, height)
+        self._width = width
+        self._height = height
+        self.graph = GridGraph(width+1, height)
         self._drop_position = [width, height//2]
         self._init_robots(robots)
         self._init_trees(trees)
         self._init_occupation_matrix(trees, robots, height, width)
         self._init_missions()
-        self._generate_mission(1)
+        self._entrance = (width, height-1)
+        self._exit = (width, 0)
+
+        # Just for debugging
+        # self._generate_mission(0)
 
     def _init_occupation_matrix(self, trees, robots, height, width):
         """
@@ -94,17 +116,17 @@ class Controller(QtCore.QObject):
         drzewo - "t"
         """
 
-        tmp_arr = [['0' for i in range(width)] for j in range(height)]
+        tmp_arr = [['0' for i in range(width+1)] for j in range(height)]
         tmp_arr = np.array(tmp_arr)
         self._occupation_matrix = tmp_arr
         for robot in robots:
-            self._occupation_matrix[robot.pose[0], robot.pose[1]] = 'r'
+            self._occupation_matrix[robot.pose[1], robot.pose[0]] = 'r'
 
         for tree in trees:
-            self._occupation_matrix[tree.pose[0], tree.pose[1]] = 't'
+            self._occupation_matrix[tree.pose[1], tree.pose[0]] = 't'
 
         # Just for debugging
-        # print("Initialized _occupation_matrix: ",self._occupation_matrix)
+        print("Initialized _occupation_matrix: ", self._occupation_matrix)
 
     def _init_robots(self, robots):
         """
@@ -116,6 +138,7 @@ class Controller(QtCore.QObject):
             self._current_robots_position.append(robot.pose)
             self._next_robots_position.append(None)
             self._robots_state.append(robot_State.IDLE)
+            self._robot_tree.append(0)
 
         # Just for debugging
         print("Initialized _current_robots_position:",
@@ -147,7 +170,7 @@ class Controller(QtCore.QObject):
         Tak więc w pierwszej iteracji programu zostaną wyznaczone
         misje dla wszystkich robotów
         """
-        self._missions = [None for i in range(len(self._robots_state))]
+        self._missions = [[] for i in range(len(self._robots_state))]
 
         # Just for debugging
         print("Initialized _missions:", self._missions)
@@ -157,21 +180,57 @@ class Controller(QtCore.QObject):
         Głowna pętla programu.
         """
         while(True):
+            # print("Executing Controller while")
             acceptable_events = []
             # 1. Przetworz kolejke obserwowalnych i zaktualizuj stan (wywolaj
             #    główną funkcje, w niej iterujemy dopóki kolejka obserwowalnych
             #    nie jest pusta)
+            self._update_state_ready()
+            # print(" _occupation_matrix: ", self._occupation_matrix)
+            # print(" _current_robots_position:", self._current_robots_position)
+            # print(" _next_robots_position:", self._next_robots_position)
+            # print(" _robots_state:", self._robots_state)
+            # print("self._trees_state: ",self._trees_state)
+            # print("self._trees_position", self._trees_position)
             # 2. Przejdz po misjach wszystkich robotów
             #   2.1 Jesli pusta wygeneruj
             #   2.2 Jesli nie pusta, weź pierwsze zdanie, sprawdz za pomoca
             #       funcji gamma (dla odpowiedniego eventu) czy jest mozliwa
             #       do wykonania, jeżeli możliwa dodaj do listy mozliwych do
             #       wykonania.
-            # 3. Weź optymalny event z acceptable_events
-            # 4. Zaktualizuj wewnętrzny stan na podstawie wybranego zadania
-            # 5. Dodaj wybrane zadanie do kolejki controllable_que
+            for robot_id, mission in enumerate(self._missions):
+                # print("robot_id: ", robot_id)
+                num_free_trees = 0
+                for t in self._trees_state:
+                    if t == tree_Stete.GROWN:
+                        num_free_trees += 1
 
-            pass
+                if self._robots_state[robot_id] == robot_State.IDLE and num_free_trees > 0:
+                    self._missions[robot_id] = self._generate_mission(robot_id)
+                    print("Generate mission for robot:", robot_id)
+
+                if len(self._missions[robot_id]) > 0:
+                    event_to_execute = self._missions[robot_id][0]
+                    # print("event_to_execute: ", event_to_execute)
+                    if self._gamma(event_to_execute):
+                        acceptable_events.append(event_to_execute)
+
+            # 3. Weź optymalny event z acceptable_events
+            # print("acceptable_events", acceptable_events)
+            if len(acceptable_events) == 0:
+                continue
+
+            event_to_send = self._select_optimal(acceptable_events)
+            # przypisujemy assigned do drzewa robota, które ma w swojej misji
+            robot_id = int(event_to_send.split("_")[1])
+            self._trees_state[self._robot_tree[robot_id]] = tree_Stete.ASSIGNED
+            # print("event_to_send: ", event_to_send)
+            # 4. Zaktualizuj wewnętrzny stan na podstawie wybranego zadania
+            self._update_state_control(event_to_send)
+            # 5. Dodaj wybrane zadanie do kolejki controllable_que
+            self._controllable_que.put(event_to_send)
+
+
 
     def _gamma(self, event):
         """
@@ -191,13 +250,13 @@ class Controller(QtCore.QObject):
         """
         Sprawdza czy event move jest możliwy do wykonania
         """
-        robot_id = l_event[1]
-        x_prim = l_event[2]
-        y_prim = l_event[3]
+        robot_id = int(l_event[1])
+        x_prim = int(l_event[2])
+        y_prim = int(l_event[3])
 
         # jeśli robot może przejeżdzać po drzewach to trzeba dodać '0' or 't'
-        if (self._occupation_matrix[x_prim, y_prim] == '0' or
-            self._occupation_matrix[x_prim, y_prim] == 't') and \
+        if (self._occupation_matrix[y_prim, x_prim] == '0' or
+            self._occupation_matrix[y_prim, x_prim] == 't') and \
            (self._robots_state[robot_id] == robot_State.READY or
            self._robots_state[robot_id] == robot_State.IDLE):
             return True
@@ -207,12 +266,13 @@ class Controller(QtCore.QObject):
         """
         Sprawdza czy event pick jest możliwy do wykonania
         """
-        robot_id = l_event[1]
-        treeID = l_event[1]
+        robot_id = int(l_event[1])
+        treeID = int(l_event[2])
 
         if self._current_robots_position[robot_id] ==\
            self._trees_position[treeID] and \
-           self._robots_state[robot_id] == robot_State.READY:
+           self._robots_state[robot_id] == robot_State.READY and\
+           self._trees_state[treeID] == tree_Stete.ASSIGNED:
             return True
         return False
 
@@ -220,7 +280,7 @@ class Controller(QtCore.QObject):
         """
         Sprawdza czy event drop jest możliwy do wykonania
         """
-        robot_id = l_event[1]
+        robot_id = int(l_event[1])
 
         if self._current_robots_position[robot_id] == self._drop_position and \
            self._robots_state[robot_id] == robot_State.READY:
@@ -235,23 +295,16 @@ class Controller(QtCore.QObject):
         3. Od wjazdu do magazynu, upusc, od magazynu do wyjazdu
         4. Od wyjzdu do parkingu
         """
-        desired_tree_position = self._trees_position[robot_id]
-        robot_position = self._current_robots_position[robot_id]
-        start = tuple(robot_position)
-        goal = tuple(desired_tree_position)
-        print("start", start)
-        print("goal", goal)
+        tree_id, path_2_tree = self._mission_collect_tree(robot_id)
+        path_2_entrance = self._mission_2_entrance(robot_id, tree_id)
+        path_2_road = self._mission_road(robot_id)
+        path_2_parking = self._mission_2_parking(robot_id)
 
-        came_from, cost_so_far = self.graph.a_star_search(self.graph,
-                                                          start, goal)
-        self.graph.draw_grid(self.graph,
-                             point_to=came_from,
-                             start=start, goal=goal)
-        self.graph.draw_grid(self.graph,
-                             path=self.graph.reconstruct_path(came_from,
-                                                              start=start,
-                                                              goal=goal))
-        print(self.graph.reconstruct_path(came_from, start=start, goal=goal))
+        entire_mission = path_2_tree + path_2_entrance + path_2_road + path_2_parking
+
+        # print("path_2_parking: ", path_2_parking)
+        # print("Entire misiion:", entire_mission)
+        return entire_mission
 
     def _mission_collect_tree(self, robot_id):
         """
@@ -261,27 +314,238 @@ class Controller(QtCore.QObject):
 
         zwraca ścieżkę i id'k wybranego drzewa
         """
-        pass
+        path = []
+
+        path.append("move_" +
+                    str(robot_id) + "_" +
+                    str(robot_id) + "_" +
+                    str(1))
+
+        path.append("move_" +
+                    str(robot_id) + "_" +
+                    str(robot_id) + "_" +
+                    str(2))
+
+        tree_id = random.randint(0, len(self._trees_state)-1)
+        while(self._trees_state[tree_id] != tree_Stete.GROWN):
+            tree_id = random.randint(0, len(self._trees_state)-1)
+
+        self._robot_tree[robot_id] = tree_id
+
+        desired_tree_position = self._trees_position[tree_id]
+        # robot_position = self._current_robots_position[robot_id]
+        start = (robot_id, 2)
+        goal = tuple(desired_tree_position)
+
+        came_from, cost_so_far = self.graph.a_star_search(self.graph,
+                                                          start, goal)
+        # self.graph.draw_grid(self.graph,
+        #                      point_to=came_from,
+        #                      start=start, goal=goal)
+        # self.graph.draw_grid(self.graph,
+        #                      path=self.graph.reconstruct_path(came_from,
+        #                                                       start=start,
+        #                                                       goal=goal))
+
+        mission = self.graph.reconstruct_path(came_from,
+                                              start=start,
+                                              goal=goal)
+        mission.pop(0)
+        path += ["move_" +
+                 str(robot_id) + "_" +
+                 str(position[0]) + "_" +
+                 str(position[1]) for position in mission]
+        # Equivalence in standard for loop
+        # for position in mission:
+        #     path.append("move_" +
+        #                 str(robot_id) + "_" +
+        #                 str(position[0]) + "_" +
+        #                 str(position[1]))
+
+        path.append("pick_" +
+                    str(robot_id) + "_" +
+                    str(tree_id))
+
+        # print("Mission: ", mission)
+        # print("Path:", path)
+
+        return tree_id, path
 
     def _mission_2_entrance(self, robot_id, tree_id):
         """
         Generuje ścieżkę od wybranwgo drzewa do wjazdu (żeby stanął na
         pierwszym kafelku drogi).
         """
-        pass
+        path = []
+        tree_position = self._trees_position[tree_id]
+
+        start = tuple(tree_position)
+        goal = self._entrance
+
+        came_from, cost_so_far = self.graph.a_star_search(self.graph,
+                                                          start, goal)
+        # self.graph.draw_grid(self.graph,
+        #                      point_to=came_from,
+        #                      start=start, goal=goal)
+        # self.graph.draw_grid(self.graph,
+        #                      path=self.graph.reconstruct_path(came_from,
+        #                                                       start=start,
+        #                                                       goal=goal))
+        mission = self.graph.reconstruct_path(came_from,
+                                              start=start,
+                                              goal=goal)
+
+        mission.pop(0)
+        path = ["move_" +
+                str(robot_id) + "_" +
+                str(position[0]) + "_" +
+                str(position[1]) for position in mission]
+        # Equivalence in standard for loop
+        # for position in mission:
+        #     path.append("move_" +
+        #                 str(robot_id) + "_" +
+        #                 str(position[0]) + "_" +
+        #                 str(position[1]))
+
+        # print("Mission:", mission)
+        # print("Path:", path)
+
+        return path
 
     def _mission_road(self, robot_id):
         """
         Generuj ruch po drodze do magazynu, odstawienie drzewa, i ruch od
         magazynu do wyjazdu (żeby stanął na ostatnim kafelku drogi).
         """
-        pass
+        path = []
+        start = self._entrance
+        goal = tuple(self._drop_position)
+
+        came_from, cost_so_far = self.graph.a_star_search(self.graph,
+                                                          start, goal)
+        # self.graph.draw_grid(self.graph,
+        #                      point_to=came_from,
+        #                      start=start, goal=goal)
+        # self.graph.draw_grid(self.graph,
+        #                      path=self.graph.reconstruct_path(came_from,
+        #                                                       start=start,
+        #                                                       goal=goal))
+
+        mission_to_drop = self.graph.reconstruct_path(came_from,
+                                                      start=start,
+                                                      goal=goal)
+        mission_to_drop.pop(0)
+
+        start = tuple(self._drop_position)
+        goal = self._exit
+
+        came_from, cost_so_far = self.graph.a_star_search(self.graph,
+                                                          start, goal)
+        # self.graph.draw_grid(self.graph,
+        #                      point_to=came_from,
+        #                      start=start, goal=goal)
+        # self.graph.draw_grid(self.graph,
+        #                      path=self.graph.reconstruct_path(came_from,
+        #                                                       start=start,
+        #                                                       goal=goal))
+
+        mission_to_exit = self.graph.reconstruct_path(came_from,
+                                                      start=start,
+                                                      goal=goal)
+        mission_to_exit.pop(0)
+        # print("Mission_to_drop:", mission_to_drop)
+        # print("Mission_to_exit:", mission_to_exit)
+
+        path = ["move_" +
+                str(robot_id) + "_" +
+                str(position[0]) + "_" +
+                str(position[1]) for position in mission_to_drop]
+        # Equivalence in standard for loop
+        # for position in mission_to_drop:
+        #     path.append("move_" +
+        #                 str(robot_id) + "_" +
+        #                 str(position[0]) + "_" +
+        #                 str(position[1]))
+
+        path.append("drop_" + str(robot_id))
+
+        path += ["move_" +
+                 str(robot_id) + "_" +
+                 str(position[0]) + "_" +
+                 str(position[1]) for position in mission_to_exit]
+        # Equivalence in standard for loop
+        # for position in mission_to_exit:
+        #     path.append("move_" +
+        #                 str(robot_id) + "_" +
+        #                 str(position[0]) + "_" +
+        #                 str(position[1]))
+
+        # print("Path: ", path)
+
+        return path
 
     def _mission_2_parking(self, robot_id):
         """
         Generuj ruch od aktualniej pozycji robota do jego miejsca w parkingu
         """
-        pass
+        path = []
+
+        for i in range(self._width - len(self._robots_state)):
+            path.append("move_" +
+                        str(robot_id) + "_" +
+                        str(self._width-1-i) + "_" +
+                        str(0))
+
+        path.append("move_" +
+                    str(robot_id) + "_" +
+                    str(len(self._robots_state)) + "_" +
+                    str(1))
+
+        for i in range(len(self._robots_state) - robot_id):
+            path.append("move_" +
+                        str(robot_id) + "_" +
+                        str(len(self._robots_state)-1-i) + "_" +
+                        str(1))
+
+        path.append("move_" +
+                    str(robot_id) + "_" +
+                    str(robot_id) + "_" +
+                    str(0))
+
+        # # the robot position is still the robot position on the parking
+        # robot_position = self._current_robots_position[robot_id]
+        # start = self._exit
+        # goal = tuple(robot_position)
+
+        # came_from, cost_so_far = self.graph.a_star_search(self.graph,
+        #                                                   start, goal)
+        # # self.graph.draw_grid(self.graph,
+        # #                      point_to=came_from,
+        # #                      start=start, goal=goal)
+        # # self.graph.draw_grid(self.graph,
+        # #                      path=self.graph.reconstruct_path(came_from,
+        # #                                                       start=start,
+        # #                                                       goal=goal))
+        # mission = self.graph.reconstruct_path(came_from,
+        #                                       start=start,
+        #                                       goal=goal)
+        # mission.pop(0)
+
+        # path = ["move_" +
+        #         str(robot_id) + "_" +
+        #         str(position[0]) + "_" +
+        #         str(position[1]) for position in mission]
+        # # Equivalence in standard for loop
+        # # for position in mission:
+        # #     path.append("move_" +
+        # #                 str(robot_id) + "_" +
+        # #                 str(position[0]) + "_" +
+        # #                 str(position[1]))
+
+        # # print("Mission:", mission)
+        # # print("Path: ", path)
+
+        return path
 
     def _update_state_ready(self):
         """
@@ -291,7 +555,8 @@ class Controller(QtCore.QObject):
         while not self._observable_que.empty():
             event = self._observable_que.get_nowait()
             l_event = event.split("_")
-            robot_id = l_event[1]
+            robot_id = int(l_event[1])
+
             if self._robots_state[robot_id] == robot_State.COLLECTING:
                 self._update_ready_collecting(robot_id)
 
@@ -299,11 +564,11 @@ class Controller(QtCore.QObject):
                 self._update_ready_dropping(robot_id)
 
             if self._robots_state[robot_id] == robot_State.MOVING and\
-               not self._missions[robot_id].empty():
+               len(self._missions[robot_id]) > 0:
                 self._update_ready_moving_notEmpty(robot_id)
 
             if self._robots_state[robot_id] == robot_State.MOVING and\
-               self._missions[robot_id].empty():
+               len(self._missions[robot_id]) == 0:
                 self._update_ready_moving_empty(robot_id)
 
     def _update_ready_collecting(self, robot_id):
@@ -340,7 +605,7 @@ class Controller(QtCore.QObject):
         # zwalniamy pole z macierzy zajętości
         x = self._current_robots_position[robot_id][0]
         y = self._current_robots_position[robot_id][1]
-        self._occupation_matrix[x, y] = '0'
+        self._occupation_matrix[y, x] = '0'
         # zmianiamy aktualną pozycje robota na x', y'
         x_prim = self._next_robots_position[robot_id][0]
         y_prim = self._next_robots_position[robot_id][1]
@@ -355,11 +620,13 @@ class Controller(QtCore.QObject):
         # zwalniamy pole z macierzy zajętości
         x = self._current_robots_position[robot_id][0]
         y = self._current_robots_position[robot_id][1]
-        self._occupation_matrix[x, y] = '0'
+        self._occupation_matrix[y, x] = '0'
         # zmianiamy aktualną pozycje robota na x', y'
         x_prim = self._next_robots_position[robot_id][0]
         y_prim = self._next_robots_position[robot_id][1]
         self._current_robots_position[robot_id] = [x_prim, y_prim]
+
+        self._missions[robot_id] = []
 
     def _update_state_control(self, event):
         """
@@ -367,25 +634,25 @@ class Controller(QtCore.QObject):
         """
         l_event = event.split("_")
         if l_event[0] == "move":
-            return self._update_state_move(l_event)
+            self._update_state_move(l_event)
 
         if l_event[0] == "pick":
-            return self._update_state_pick(l_event)
+            self._update_state_pick(l_event)
 
         if l_event[0] == "drop":
-            return self._update_state_drop(l_event)
+            self._update_state_drop(l_event)
 
     def _update_state_move(self, l_event):
         """
         Zaktualizuj stan w momencie jak wysyłamy move do konkretnego robota
         """
-        robot_id = l_event[1]
-        x_prim = l_event[2]
-        y_prim = l_event[3]
+        robot_id = int(l_event[1])
+        x_prim = int(l_event[2])
+        y_prim = int(l_event[3])
         # stan robota zmienia się na moving
         self._robots_state[robot_id] = robot_State.MOVING
         # zajmujemy pole x_prim y_prim
-        self._occupation_matrix[x_prim, y_prim] = 'r'
+        self._occupation_matrix[y_prim, x_prim] = 'r'
         # dodajemy następną pozycje robota:
         self._next_robots_position[robot_id] = [x_prim, y_prim]
         # usuwamy zadanie z misji danego robota
@@ -395,8 +662,8 @@ class Controller(QtCore.QObject):
         """
         Zaktualizuj stan w momencie jak wysyłamy pick do konkretnego robota
         """
-        robot_id = l_event[1]
-        treeID = l_event[1]
+        robot_id = int(l_event[1])
+        treeID = int(l_event[1])
         # stan robota zmienia się na collecting
         self._robots_state[robot_id] = robot_State.COLLECTING
         # usuwamy zadanie z misji danego robota
@@ -406,7 +673,7 @@ class Controller(QtCore.QObject):
         """
         Zaktualizuj stan w momencie jak wysyłamy drop do konkretnego robota
         """
-        robot_id = l_event[1]
+        robot_id = int(l_event[1])
         # stan robota zmienia się na dropping
         self._robots_state[robot_id] = robot_State.DROPPING
         # usuwamy zadanie z misji danego robota
@@ -417,4 +684,4 @@ class Controller(QtCore.QObject):
         Wybierz \"najlepszy\" event z listy zaakceptowanych evetnów (na razie
         może być randomowy)
         """
-        pass
+        return random.choice(accepted_event_list)

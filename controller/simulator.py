@@ -68,12 +68,12 @@ class Simulator(QtCore.QObject):
         self._width = width
         self._height = height
 
-        self.dropoff = [width, height//2]
+        self.dropoff = [width, height // 2]
 
         self.logMessage.emit("Spawning trees...")
         for i in range(num_trees):
             generated = False
-            while(not generated):
+            while not generated:
                 x = random.randrange(0, width - x_margin)
                 y = random.randrange(y_margin, height)
 
@@ -96,41 +96,32 @@ class Simulator(QtCore.QObject):
         self.generateGrid.emit(height, width, self.dropoff, self._parking)
         self.initWorld.emit(self._robots, self._trees)
 
-        self.worldGenerated.emit(
-            self._robots,
-            self._trees,
-            self._height,
-            self._width
-        )
+        self.worldGenerated.emit(self._robots, self._trees, self._height, self._width)
         self.logMessage.emit("World created successfully!")
         self._is_generated = True
 
     def run(self):
-        while(True):
+        while True:
+            # print("Executing Simulator while")
             while not self._controllable_que.empty():
                 # Process all incoming contollable events
                 # Take element from queue and delete it
                 event = self._controllable_que.get_nowait()
                 event = event.split("_")
 
-                print(event)
+                # print(event)
 
-                if(event[0] == 'move'):
+                if event[0] == "move":
                     # We need to cast the indexes to int because after split they
                     # are still strings
-                    self._robots[int(event[1])].move_to(
-                        [int(event[2]),
-                         int(event[3])]
-                    )
+                    self._robots[int(event[1])].move_to([int(event[2]), int(event[3])])
 
-                if(event[0] == 'pick'):
+                if event[0] == "pick":
                     # We need to cast the indexes to int because after split they
                     # are still strings
-                    self._robots[int(event[1])].collect(
-                        self._trees[int(event[2])]
-                    )
+                    self._robots[int(event[1])].collect(self._trees[int(event[2])])
 
-                if(event[0] == 'drop'):
+                if event[0] == "drop":
                     # We need to cast the indexes to int because after split they
                     # are still strings
                     self._robots[int(event[1])].drop()
@@ -140,21 +131,17 @@ class Simulator(QtCore.QObject):
             # Update the Graphics if something has changed
             if self.check_update():
                 # print(self._stock_pile)
-                self.updateWorld.emit(
-                    self.robots,
-                    self._trees,
-                    self._stock_pile
-                )
+                self.updateWorld.emit(self.robots, self._trees, self._stock_pile)
 
     def check_update(self):
         update = False
         for robot in self._robots:
-            if(robot.updated):
+            if robot.updated:
                 robot.updated = False
                 update = True
 
         for tree in self._trees:
-            if(tree.updated):
+            if tree.updated:
                 tree.updated = False
                 update = True
 

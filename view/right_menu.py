@@ -108,10 +108,10 @@ class RightMenu(QtWidgets.QGroupBox):
 
     @QtCore.Slot()
     def _default_clicked(self):
-        self._height_textbox.setText(str(25))
-        self._width_textbox.setText(str(25))
-        self._robots_textbox.setText(str(5))
-        self._trees_textbox.setText(str(50))
+        self._height_textbox.setText(str(10))
+        self._width_textbox.setText(str(12))
+        self._robots_textbox.setText(str(1))
+        self._trees_textbox.setText(str(12))
 
     @QtCore.Slot()
     def _about_clicked(self):

@@ -1,7 +1,7 @@
 from PySide2.QtWidgets import QApplication
 from view.main_window import MainWindow
 from controller.simulator import Simulator, SimulatorThread
-from controller.controller import Controller
+from controller.controller import Controller, ControllerThread
 import sys
 
 if __name__ == "__main__":
@@ -15,6 +15,9 @@ if __name__ == "__main__":
 
     sim_thread = SimulatorThread(sim)
     sim_thread.start()
+
+    controller_thread = ControllerThread(controller)
+    controller_thread.start()
 
     sim.observable_que = controller.observable_que
     controller.controllable_que = sim.controllable_que

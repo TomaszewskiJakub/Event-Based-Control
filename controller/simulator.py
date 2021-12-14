@@ -128,8 +128,8 @@ class Simulator(QtCore.QObject):
                     self._robots[int(event[1])].drop()
                     # Increment the number of wood in the stockpile
                     self._stock_pile += 1
-            
-            sleep(0.001)
+
+            sleep(0.01)
 
             # Update the Graphics if something has changed
             # if self.check_update():

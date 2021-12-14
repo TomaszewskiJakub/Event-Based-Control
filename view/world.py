@@ -6,6 +6,24 @@ from model.m_tree import tree_state
 from time import time
 
 
+class UpdateThread(QtCore.QThread):
+    updateWorld = QtCore.Signal(list, list, int)
+
+    def __init__(self, sim, rate):
+        super(UpdateThread, self).__init__()
+        self._sim = sim
+        self._period = 1000/rate
+        print(self._period)
+
+    def run(self):
+        while(True):
+            # print("Sending update")
+            self.updateWorld.emit(self._sim.robots,
+                                self._sim._trees,
+                                self._sim._stock_pile)
+            self.msleep(30)
+
+
 class WorldDisplay(QtWidgets.QGraphicsView):
     def __init__(self, side=100):
         super(WorldDisplay, self).__init__()
@@ -35,6 +53,7 @@ class WorldDisplay(QtWidgets.QGraphicsView):
     @QtCore.Slot()
     def update_world(self, robots, trees, stock_pile):
         s = time()
+        # print("Updating")
         for i in range(len(trees)):
             if(trees[i].state == tree_state.CUTTED):
                 self._tree_items[i].setPixmap(self.stump_pm.scaled(
@@ -48,8 +67,11 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                 robots[i].pose[1]*self.side
             )
 
-        if((stock_pile // 4 - 1) >= 0 and (stock_pile // 4 - 1) < len(self._bridge_items)):
-            self._bridge_items[stock_pile // 4 - 1].show()
+        trees_per_bridge_segment = len(trees) // 3
+
+        if((stock_pile // trees_per_bridge_segment - 1) >= 0 and 
+           (stock_pile // trees_per_bridge_segment - 1) < len(self._bridge_items)):
+            self._bridge_items[stock_pile // trees_per_bridge_segment - 1].show()
         # print("Update time: ", time() - s)
 
     @QtCore.Slot()

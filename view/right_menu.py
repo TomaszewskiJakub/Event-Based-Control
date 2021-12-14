@@ -4,7 +4,8 @@ from view.about_window import AboutWindow
 
 
 class RightMenu(QtWidgets.QGroupBox):
-    sendData = QtCore.Signal(int, int, int, int)
+    sendData = QtCore.Signal(int, int, int, int, float)
+    startSignal = QtCore.Signal()
     logMessage = QtCore.Signal(str)
 
     def __init__(self):
@@ -16,6 +17,7 @@ class RightMenu(QtWidgets.QGroupBox):
         self._robots_layout = QtWidgets.QHBoxLayout()
         self._trees_layout = QtWidgets.QHBoxLayout()
         self._button_layout = QtWidgets.QHBoxLayout()
+        self._speed_layout = QtWidgets.QHBoxLayout()
 
         self._world_label = QtWidgets.QLabel("World size:")
         self._height_label = QtWidgets.QLabel("height:")
@@ -28,12 +30,17 @@ class RightMenu(QtWidgets.QGroupBox):
 
         self._trees_label = QtWidgets.QLabel("Number of trees:   ")
         self._trees_textbox = QtWidgets.QLineEdit()
-        self._trees_validator = QIntValidator(1, 2000)
 
         self._create_button = QtWidgets.QPushButton("Create")
         self._clear_button = QtWidgets.QPushButton("Clear")
         self._default_button = QtWidgets.QPushButton("Default")
         self._about_button = QtWidgets.QPushButton("About")
+        self._start_button = QtWidgets.QPushButton("Start")
+        self._start_button.setDisabled(True)
+
+        self._speed_label = QtWidgets.QLabel("Robot step durration:")
+        self._speed_textbox = QtWidgets.QLineEdit()
+        self._speed_textbox.setText(str(0.4))
 
         self._initUI()
 
@@ -56,20 +63,30 @@ class RightMenu(QtWidgets.QGroupBox):
         self._button_layout.addWidget(self._clear_button)
         self._button_layout.addWidget(self._default_button)
 
+        self._speed_layout.addWidget(self._speed_label)
+        self._speed_layout.addWidget(self._speed_textbox)
+
         self._main_layout.addLayout(self._world_layout)
         self._main_layout.addLayout(self._robots_layout)
         self._main_layout.addLayout(self._trees_layout)
+        self._main_layout.addLayout(self._speed_layout)
         self._main_layout.addLayout(self._button_layout)
         self._main_layout.addWidget(self._about_button)
+        self._main_layout.addWidget(self._start_button)
 
         self.setLayout(self._main_layout)
 
         self._create_button.clicked.connect(self._create_clicked)
         self._clear_button.clicked.connect(self._clear_clicked)
         self._default_button.clicked.connect(self._default_clicked)
+        self._start_button.clicked.connect(self._start_clicked)
 
         self._about_button.clicked.connect(self._about_clicked)
         self._about_window = AboutWindow()
+
+    @QtCore.Slot()
+    def _start_clicked(self):
+        self.startSignal.emit()
 
     @QtCore.Slot()
     def _create_clicked(self):
@@ -77,6 +94,7 @@ class RightMenu(QtWidgets.QGroupBox):
         height = int(self._height_textbox.text())
         num_robots = int(self._robots_textbox.text())
         num_trees = int(self._trees_textbox.text())
+        speed = float(self._speed_textbox.text())
 
         try:
             self.validate_inputs(width, height, num_robots, num_trees)
@@ -88,12 +106,14 @@ class RightMenu(QtWidgets.QGroupBox):
             width,
             height,
             num_robots,
-            num_trees
+            num_trees,
+            speed
         )
         self._height_textbox.setDisabled(True)
         self._width_textbox.setDisabled(True)
         self._robots_textbox.setDisabled(True)
         self._trees_textbox.setDisabled(True)
+        self._start_button.setDisabled(False)
 
         self._create_button.setDisabled(True)
         self._clear_button.setDisabled(True)

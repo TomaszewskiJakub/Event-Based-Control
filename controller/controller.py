@@ -1,10 +1,11 @@
 from enum import Enum
+import enum
 from queue import Empty, Queue
 from PySide2 import QtCore
 import numpy as np
 from numpy.core.records import array
 from numpy.lib.function_base import append
-from gridGraph import GridGraph
+from controller.gridGraph import GridGraph
 import random
 from time import sleep
 
@@ -219,6 +220,10 @@ class Controller(QtCore.QObject):
                     if self._gamma(event_to_execute):
                         acceptable_events.append(event_to_execute)
 
+            if(all(state == robot_State.IDLE for state in self._robots_state) \
+               and num_free_trees == 0):
+                break
+
             # 3. Weź optymalny event z acceptable_events
             # print("acceptable_events", acceptable_events)
             if len(acceptable_events) == 0:
@@ -236,7 +241,7 @@ class Controller(QtCore.QObject):
 
             sleep(0.01)
 
-
+        self.logMessage.emit("No more work to do. Stoping controller")
 
     def _gamma(self, event):
         """
@@ -293,6 +298,26 @@ class Controller(QtCore.QObject):
             return True
         return False
 
+    def _select_tree(self, robot_id):
+        d_min = 1000000
+        closest_id = -1
+        for tree_id, state in enumerate(self._trees_state):
+            if state == tree_Stete.GROWN:
+                # print(self._trees_position[tree_id])
+                dx = np.abs(self._current_robots_position[robot_id][0]
+                            - self._trees_position[tree_id][0])
+                dy = np.abs(self._current_robots_position[robot_id][1]
+                            - self._trees_position[tree_id][1])
+                d = dx+dy
+                # print(d)
+                if d < d_min:
+                    d_min = d
+                    closest_id = tree_id
+        # print("Closetes: ")
+        # print(d_min, self._trees_position[closest_id])
+
+        return closest_id
+
     def _generate_mission(self, robot_id):
         """
         Generuje całą misje dla danego robota.
@@ -332,9 +357,10 @@ class Controller(QtCore.QObject):
                     str(robot_id) + "_" +
                     str(2))
 
-        tree_id = random.randint(0, len(self._trees_state)-1)
-        while(self._trees_state[tree_id] != tree_Stete.GROWN):
-            tree_id = random.randint(0, len(self._trees_state)-1)
+        # tree_id = random.randint(0, len(self._trees_state)-1)
+        # while(self._trees_state[tree_id] != tree_Stete.GROWN):
+        #     tree_id = random.randint(0, len(self._trees_state)-1)
+        tree_id = self._select_tree(robot_id)
 
         self._robot_tree[robot_id] = tree_id
 

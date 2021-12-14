@@ -63,7 +63,7 @@ class Simulator(QtCore.QObject):
         self._observable_que = var
 
     @QtCore.Slot()
-    def generate(self, width, height, num_robots, num_trees, x_margin=3, y_margin=4):
+    def generate(self, width, height, num_robots, num_trees, sim_speed, x_margin=3, y_margin=4):
         self.logMessage.emit("Generating World...")
         self._width = width
         self._height = height
@@ -90,7 +90,7 @@ class Simulator(QtCore.QObject):
         self.logMessage.emit("Spawning robots...")
         self._parking = []
         for i in range(num_robots):
-            self._robots.append(mRobot(i, self._observable_que, [i, 0]))
+            self._robots.append(mRobot(i, self._observable_que, sim_speed, [i, 0]))
             self._parking.append([i, 0])
 
         self.generateGrid.emit(height, width, self.dropoff, self._parking)
@@ -101,6 +101,7 @@ class Simulator(QtCore.QObject):
         self._is_generated = True
 
     def run(self):
+        last_update = 0
         while True:
             # print("Executing Simulator while")
             while not self._controllable_que.empty():
@@ -127,11 +128,17 @@ class Simulator(QtCore.QObject):
                     self._robots[int(event[1])].drop()
                     # Increment the number of wood in the stockpile
                     self._stock_pile += 1
+            
+            sleep(0.001)
 
             # Update the Graphics if something has changed
-            if self.check_update():
-                # print(self._stock_pile)
-                self.updateWorld.emit(self.robots, self._trees, self._stock_pile)
+            # if self.check_update():
+            #     s = time.time()
+            #     print("Sending update")
+            #     self.updateWorld.emit(self.robots, self._trees, self._stock_pile)
+            #     # print("Rate: ", 1/(s-last_update))
+            #     last_update=s
+                
 
     def check_update(self):
         update = False

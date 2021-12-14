@@ -17,7 +17,6 @@ if __name__ == "__main__":
     sim_thread.start()
 
     controller_thread = ControllerThread(controller)
-    controller_thread.start()
 
     sim.observable_que = controller.observable_que
     controller.controllable_que = sim.controllable_que
@@ -25,6 +24,8 @@ if __name__ == "__main__":
     sim.worldGenerated.connect(controller.init_all)
 
     win = MainWindow(sim, controller)
+    win.startSignal.connect(controller_thread.start)
+
     win.show()
 
     sys.exit(qt_app.exec_())

@@ -3,14 +3,16 @@ import random
 from time import time
 
 class mRobot():
-    def __init__(self, id, obsv_que, init_pose=[0, 0]):
+    def __init__(self, id, obsv_que, sim_speed, init_pose=[0, 0]):
         self.pose = init_pose
         self.updated = False
         self._obsv_que = obsv_que
         self._id = id
+        self._sim_speed = sim_speed
+        print("Sim speed: ", self._sim_speed)
 
     def move_to(self, pose):
-        timer = threading.Timer(random.uniform(0, 1), self._move_callback, [pose])
+        timer = threading.Timer(self._sim_speed, self._move_callback, [pose])
         timer.start()
 
     def _move_callback(self, pose):
@@ -20,7 +22,7 @@ class mRobot():
         self.updated = True
 
     def collect(self, tree):
-        timer = threading.Timer(random.uniform(0, 1), self._collect_callback, [tree])
+        timer = threading.Timer(self._sim_speed, self._collect_callback, [tree])
         timer.start()
 
     def _collect_callback(self, tree):
@@ -29,7 +31,7 @@ class mRobot():
         tree.cut()
 
     def drop(self):
-        timer = threading.Timer(random.uniform(0, 1), self._drop_callback)
+        timer = threading.Timer(self._sim_speed, self._drop_callback)
         timer.start()
 
     def _drop_callback(self):

@@ -6,6 +6,7 @@ from numpy.core.records import array
 from numpy.lib.function_base import append
 from gridGraph import GridGraph
 import random
+from time import sleep
 
 from model.m_tree import tree_state
 
@@ -49,6 +50,8 @@ class ControllerThread(QtCore.QThread):
 
 
 class Controller(QtCore.QObject):
+    logMessage = QtCore.Signal(str)
+
     def __init__(self):
         super(Controller, self).__init__()
         self._current_robots_position = []
@@ -179,6 +182,7 @@ class Controller(QtCore.QObject):
         """
         Głowna pętla programu.
         """
+        self.logMessage.emit("Starting controller")
         while(True):
             # print("Executing Controller while")
             acceptable_events = []
@@ -207,7 +211,7 @@ class Controller(QtCore.QObject):
 
                 if self._robots_state[robot_id] == robot_State.IDLE and num_free_trees > 0:
                     self._missions[robot_id] = self._generate_mission(robot_id)
-                    print("Generate mission for robot:", robot_id)
+                    #print("Generate mission for robot:", robot_id)
 
                 if len(self._missions[robot_id]) > 0:
                     event_to_execute = self._missions[robot_id][0]
@@ -229,6 +233,8 @@ class Controller(QtCore.QObject):
             self._update_state_control(event_to_send)
             # 5. Dodaj wybrane zadanie do kolejki controllable_que
             self._controllable_que.put(event_to_send)
+
+            sleep(0.01)
 
 
 

@@ -1,11 +1,13 @@
 from PySide2 import QtWidgets, QtCore
 from view.right_menu import RightMenu
-from view.world import WorldDisplay
+from view.world import WorldDisplay, UpdateThread
 from view.consol_widget import Console
 import numpy as np
 
 
 class MainWindow(QtWidgets.QWidget):
+    startSignal = QtCore.Signal()
+
     def __init__(self, simulator, controller):
         super(MainWindow, self).__init__()
 
@@ -14,6 +16,8 @@ class MainWindow(QtWidgets.QWidget):
         self._menu = RightMenu()
         self._display = WorldDisplay()
         self._simulator = simulator
+        self._controller = controller
+        self._world_update = UpdateThread(self._simulator, 30)
 
         self._console = Console(simulator, controller)
 
@@ -22,10 +26,16 @@ class MainWindow(QtWidgets.QWidget):
 
         self._simulator.generateGrid.connect(self._display.generate_grid)
         self._simulator.initWorld.connect(self._display.init_world)
-        self._simulator.updateWorld.connect(self._display.update_world)
+        # self._simulator.updateWorld.connect(self._display.update_world)
+        self._world_update.updateWorld.connect(self._display.update_world)
+
         self._menu.sendData.connect(self._simulator.generate)
         self._simulator.logMessage.connect(self._console.add_log)
+        self._controller.logMessage.connect(self._console.add_log)
         self._menu.logMessage.connect(self._console.add_log)
+        self._menu.startSignal.connect(self.startSignal)
+
+        self._world_update.start()
 
     def initUI(self):
         # self._menu.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
@@ -37,3 +47,6 @@ class MainWindow(QtWidgets.QWidget):
         self._main_layout.addLayout(self._right_layout)
 
         self.setLayout(self._main_layout)
+
+    def _start_clicked(self):
+        self.startSignal.emit()

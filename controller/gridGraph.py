@@ -4,24 +4,26 @@ import heapq
 
 
 class GridGraph:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self, occupation_mtx):
+        h, w = occupation_mtx.shape
+        self._occ_mtx = occupation_mtx
+        self.width = w
+        self.height = h
 
     def neighbors(self, position):
         neighbors = []
 
         # West
-        if(position[0]-1 >= 0):
+        if(position[0]-1 >= 0 and self._occ_mtx[position[1], position[0]-1] != 't'):
             neighbors.append((position[0]-1, position[1]))
         # North
-        if(position[1]+1 < self.height):
+        if(position[1]+1 < self.height and self._occ_mtx[position[1]+1, position[0]] != 't'):
             neighbors.append((position[0], position[1]+1))
         # East
-        if(position[0]+1 < self.width):
+        if(position[0]+1 < self.width and self._occ_mtx[position[1], position[0]+1] != 't'):
             neighbors.append((position[0]+1, position[1]))
         # South
-        if(position[1]-1 >= 0):
+        if(position[1]-1 >= 0 and self._occ_mtx[position[1]-1, position[0]] != 't'):
             neighbors.append((position[0], position[1]-1))
 
         return neighbors

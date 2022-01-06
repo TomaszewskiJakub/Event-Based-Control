@@ -67,6 +67,9 @@ class WorldDisplay(QtWidgets.QGraphicsView):
                 robots[i].pose[1]*self.side
             )
 
+        if(len(trees) == 0):
+            return
+
         trees_per_bridge_segment = len(trees) // 3
 
         if((stock_pile // trees_per_bridge_segment - 1) >= 0 and 

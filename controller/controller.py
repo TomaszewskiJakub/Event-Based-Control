@@ -99,11 +99,11 @@ class Controller(QtCore.QObject):
         print("initing controller")
         self._width = width
         self._height = height
-        self.graph = GridGraph(width+1, height)
         self._drop_position = [width, height//2]
         self._init_robots(robots)
         self._init_trees(trees)
         self._init_occupation_matrix(trees, robots, height, width)
+        self.graph = GridGraph(self._occupation_matrix)
         self._init_missions()
         self._entrance = (width, height-1)
         self._exit = (width, 0)
@@ -299,24 +299,38 @@ class Controller(QtCore.QObject):
         return False
 
     def _select_tree(self, robot_id):
-        d_min = 1000000
-        closest_id = -1
-        for tree_id, state in enumerate(self._trees_state):
-            if state == tree_Stete.GROWN:
-                # print(self._trees_position[tree_id])
-                dx = np.abs(self._current_robots_position[robot_id][0]
-                            - self._trees_position[tree_id][0])
-                dy = np.abs(self._current_robots_position[robot_id][1]
-                            - self._trees_position[tree_id][1])
-                d = dx+dy
-                # print(d)
-                if d < d_min:
-                    d_min = d
-                    closest_id = tree_id
+        # d_min = 1000000
+        # closest_id = -1
+        # for tree_id, state in enumerate(self._trees_state):
+        #     above = (self._trees_position[tree_id][0],
+        #              self._trees_position[tree_id][1]-1)
+        #     if(state == tree_Stete.GROWN and
+        #        self._occupation_matrix[above[1], above[0]] != 't'):
+        #         # print(self._trees_position[tree_id])
+        #         dx = np.abs(self._current_robots_position[robot_id][0]
+        #                     - self._trees_position[tree_id][0])
+        #         dy = np.abs(self._current_robots_position[robot_id][1]
+        #                     - self._trees_position[tree_id][1])
+        #         d = dx+dy
+        #         # print(d)
+        #         if d < d_min:
+        #             d_min = d
+        #             closest_id = tree_id
         # print("Closetes: ")
         # print(d_min, self._trees_position[closest_id])
-
-        return closest_id
+        for i in range(self._width-2):
+            for j in range(self._height-4):
+                free_array = []
+                for k in range(self._width-2-i, self._width-2):
+                    free_array.append(self._occupation_matrix[j+4, k] != 't')
+                try:
+                    index = self._trees_position.index([self._width-3-i, j+4])
+                    if(self._trees_state[index] == tree_Stete.GROWN and
+                       all(free_array)):
+                        return index
+                except Exception as e:
+                    continue
+        return -1
 
     def _generate_mission(self, robot_id):
         """
@@ -362,9 +376,12 @@ class Controller(QtCore.QObject):
         #     tree_id = random.randint(0, len(self._trees_state)-1)
         tree_id = self._select_tree(robot_id)
 
+        print(robot_id, self._trees_position[tree_id])
+
         self._robot_tree[robot_id] = tree_id
 
-        desired_tree_position = self._trees_position[tree_id]
+        desired_tree_position = (self._trees_position[tree_id][0]+1,
+                                 self._trees_position[tree_id][1])
         # robot_position = self._current_robots_position[robot_id]
         start = (robot_id, 2)
         goal = tuple(desired_tree_position)
@@ -383,6 +400,7 @@ class Controller(QtCore.QObject):
                                               start=start,
                                               goal=goal)
         mission.pop(0)
+        mission.append(self._trees_position[tree_id])
         path += ["move_" +
                  str(robot_id) + "_" +
                  str(position[0]) + "_" +
